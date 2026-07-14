@@ -1,0 +1,129 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(curl *)",
+      "Bash(tasklist *)",
+      "Bash(netstat -ano *)",
+      "Bash(taskkill *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit-m *)",
+      "Bash(git tag *)",
+      "Bash(git rm *)",
+      "Bash(claude mcp *)",
+      "Bash(claude config *)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(pip install *)",
+      "Bash(python -m pytest *)",
+      "Bash(desktop-pet *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(pip list *)",
+      "Bash(pip uninstall *)",
+      "Bash(where pet-notify *)",
+      "Bash(where desktop-pet *)",
+      "Bash(powershell *)",
+      "Bash(echo \"---EXIT:$?\")",
+      "Bash(where claude *)",
+      "Bash(dir \"D:\\\\Program Files\\\\nodejs\\\\node_modules\\\\@anthropic-ai\\\\claude-code\\\\bin\\\\claude.exe\")",
+      "Bash(dir \"D:\\\\Program Files\\\\nodejs\\\\claude.cmd\")",
+      "Bash(dir \"D:\\\\Program Files\\\\nodejs\\\\claude-pet.cmd\")",
+      "Bash(where claude-pet *)",
+      "Bash(dir \"C:\\\\Users\\\\Administrator\\\\AppData\\\\Local\\\\DesktopPet\\\\claude-pet.exe\")",
+      "Read(//c/Users/Administrator/AppData/Local/DesktopPet/**)",
+      "Bash(npm list *)",
+      "Bash(rm \"C:\\\\Users\\\\Administrator\\\\AppData\\\\Local\\\\DesktopPet\\\\cmd_autorun.cmd\")",
+      "Bash(rm \"C:\\\\Users\\\\Administrator\\\\AppData\\\\Local\\\\DesktopPet\\\\claude-pet.exe\")"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5,
+            "_desktop_pet_managed": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5,
+            "_desktop_pet_managed": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5,
+            "_desktop_pet_managed": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pet-notify",
+            "timeout": 5,
+            "_desktop_pet_managed": true
+          }
+        ]
+      }
+    ]
+  }
+}
