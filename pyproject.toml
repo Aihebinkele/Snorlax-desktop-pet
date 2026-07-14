@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-desktop-pet"
+version = "1.0.0"
+description = "Snorlax Desktop Pet — 卡比兽桌面宠物，实时感知编码状态，会聊天会提醒"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+dependencies = [
+    "flask>=3.0",
+    "Pillow>=10.0",
+    "pystray>=0.19",
+]
+
+[project.scripts]
+desktop-pet = "desktop_pet.cli:main"
+pet-notify = "desktop_pet.cli:notify_main"
+claude-pet = "desktop_pet.cli:launcher_main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+include = ["desktop_pet*"]
+
+[tool.setuptools.package-data]
+desktop_pet = ["pet_images/*.png", "default_config.json"]

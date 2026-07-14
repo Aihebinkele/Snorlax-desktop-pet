@@ -1,0 +1,139 @@
+{
+  "sound_enabled": true,
+  "window": {
+    "width": 380,
+    "height": 260
+  },
+  "state_durations": {
+    "step_done": 1500,
+    "happy": 5000,
+    "waiting": 8000,
+    "sad": 5000,
+    "tired": 0,
+    "sleeping": 0,
+    "thinking": 0,
+    "reading": 2000
+  },
+  "step_done_timeout_ms": 5000,
+  "thinking_tired_timeout_ms": 180000,
+  "idle_sleeping_timeout_ms": 600000,
+  "alarms": [
+    {
+      "id": "preset_0",
+      "time": "09:00",
+      "label": "📋 查看今日待办",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_1",
+      "time": "10:00",
+      "label": "💧 该喝水啦！",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_2",
+      "time": "11:00",
+      "label": "💧 补充水分时间",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_3",
+      "time": "12:00",
+      "label": "🍚 中午了，吃饭啦！",
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "enabled": false
+    },
+    {
+      "id": "preset_4",
+      "time": "14:00",
+      "label": "💧 下午第一杯水",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_5",
+      "time": "15:00",
+      "label": "☕ 休息一下，活动活动",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_6",
+      "time": "16:00",
+      "label": "💧 该喝水了~",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_7",
+      "time": "17:30",
+      "label": "🏠 快下班啦，整理一下",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_8",
+      "time": "18:00",
+      "label": "🌙 下班时间到！",
+      "days": [0, 1, 2, 3, 4],
+      "enabled": false
+    },
+    {
+      "id": "preset_9",
+      "time": "19:00",
+      "label": "🍚 晚饭时间，记得吃饭",
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "enabled": false
+    }
+  ],
+  "animations": {
+    "idle": {
+      "type": "float",
+      "amp_y": 3,
+      "speed": 0.05
+    },
+    "reading": {
+      "type": "pulse_slow",
+      "amp_y": 4,
+      "speed": 0.1
+    },
+    "step_done": {
+      "type": "pulse",
+      "amp_y": 6,
+      "speed": 0.2
+    },
+    "happy": {
+      "type": "bounce",
+      "amp_y": 8,
+      "speed": 0.2
+    },
+    "waiting": {
+      "type": "sway",
+      "amp_x": 6,
+      "speed": 0.04
+    },
+    "sad": {
+      "type": "droop",
+      "amp_y": 5,
+      "speed": 0.02
+    },
+    "tired": {
+      "type": "slow_tremble",
+      "amp": 0.75,
+      "speed": 0.015
+    },
+    "sleeping": {
+      "type": "breathe",
+      "amp_y": 2,
+      "speed": 0.02
+    },
+    "thinking": {
+      "type": "pulse_slow",
+      "amp_y": 4,
+      "speed": 0.1
+    }
+  }
+}
