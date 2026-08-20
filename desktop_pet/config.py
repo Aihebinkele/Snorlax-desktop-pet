@@ -4,6 +4,8 @@ import logging
 import os
 import sys
 
+from desktop_pet import providers
+
 logger = logging.getLogger()
 
 
@@ -55,6 +57,13 @@ DEFAULT_APP_CONFIG = {
     "idle_sleeping_timeout_ms": 600000,
     "animations": ANIM_CONFIG,
     "alarms": [],
+    "deepseek_api_key": "",
+    "context_window": 1000000,
+    "stats_bar": {"enabled": True},
+    "monitor": {
+        "provider": "deepseek",
+        "keys": {p["id"]: "" for p in providers.PROVIDERS},
+    },
 }
 
 
@@ -139,6 +148,44 @@ def normalize_app_config(config):
 
         normalized_alarms.append(normalized)
     config["alarms"] = normalized_alarms
+
+    # Normalize stats-bar / balance / context window
+    key = config.get("deepseek_api_key", "")
+    config["deepseek_api_key"] = (key or "").strip() if isinstance(key, str) else ""
+
+    config["context_window"] = _clamp_int(
+        config.get("context_window"), 1000000, 1, 100000000
+    )
+
+    stats_bar = config.get("stats_bar", {})
+    if not isinstance(stats_bar, dict):
+        stats_bar = {}
+    config["stats_bar"] = {
+        "enabled": bool(stats_bar.get("enabled", True)),
+    }
+
+    # Normalize monitor（监控 Token 供应商 + 各供应商 key）
+    monitor = config.get("monitor", {})
+    if not isinstance(monitor, dict):
+        monitor = {}
+    monitor_provider = providers.normalize_provider(monitor.get("provider", providers.DEFAULT_PROVIDER))
+    raw_keys = monitor.get("keys", {})
+    if not isinstance(raw_keys, dict):
+        raw_keys = {}
+    # 迁移旧的 deepseek_api_key → monitor.keys.deepseek（若后者为空）
+    legacy_key = config.get("deepseek_api_key", "")
+    if not raw_keys.get("deepseek") and isinstance(legacy_key, str) and legacy_key.strip():
+        raw_keys = dict(raw_keys)
+        raw_keys["deepseek"] = legacy_key.strip()
+    normalized_keys = {}
+    for p in providers.PROVIDERS:
+        v = raw_keys.get(p["id"], "")
+        normalized_keys[p["id"]] = v.strip() if isinstance(v, str) else ""
+    # 保留用户自定义供应商的 key（非预设 id，仅存档展示）
+    for k, v in raw_keys.items():
+        if k not in normalized_keys and isinstance(v, str) and v.strip():
+            normalized_keys[k] = v.strip()
+    config["monitor"] = {"provider": monitor_provider, "keys": normalized_keys}
 
     return config
 

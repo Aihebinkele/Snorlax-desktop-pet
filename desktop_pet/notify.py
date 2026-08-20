@@ -49,8 +49,12 @@ def _timeout_exit():
     sys.exit(0)
 
 
-def send_event(event_type, tool_name=""):
-    data = json.dumps({"event": event_type, "message": tool_name}).encode("utf-8")
+def send_event(event_type, tool_name="", **extra):
+    payload = {"event": event_type, "message": tool_name}
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         PET_APP_URL,
         data=data,
@@ -93,25 +97,30 @@ def run_notify():
         parsed = json.loads(input_data)
         tool_name = parsed.get("tool_name", "unknown")
         hook_event = parsed.get("hook_event_name", "")
+        # 透传用量解析与 git 状态所需字段（缺省为 None，不影响既有逻辑）
+        ctx = {
+            "transcript_path": parsed.get("transcript_path"),
+            "cwd": parsed.get("cwd"),
+        }
 
         if hook_event == "UserPromptSubmit":
-            send_event("task_start", "用户指令")
+            send_event("task_start", "用户指令", **ctx)
         elif hook_event == "PreToolUse":
             _write_timestamp()
             if tool_name in READ_TOOLS:
-                send_event("reading_start", tool_name)
+                send_event("reading_start", tool_name, **ctx)
             else:
-                send_event("tool_start", tool_name)
+                send_event("tool_start", tool_name, **ctx)
         elif hook_event == "PostToolUse":
             if _check_waiting():
-                send_event("user_confirmation_needed", "等待确认")
+                send_event("user_confirmation_needed", "等待确认", **ctx)
             if tool_name == "Bash" and _get_exit_code(parsed) != 0:
-                send_event("error", f"Bash error: {tool_name}")
+                send_event("error", f"Bash error: {tool_name}", **ctx)
                 return
             if tool_name in HIGH_VALUE_TOOLS:
-                send_event("step_complete", tool_name)
+                send_event("step_complete", tool_name, **ctx)
         elif hook_event == "Stop":
-            send_event("task_complete", "任务完成")
+            send_event("task_complete", "任务完成", **ctx)
     except (json.JSONDecodeError, AttributeError):
         if len(sys.argv) >= 3:
             arg = sys.argv[2]

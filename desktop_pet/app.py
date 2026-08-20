@@ -13,6 +13,7 @@ from desktop_pet.state import StateMachine
 from desktop_pet.gui import DesktopPet
 from desktop_pet.alarm import AlarmManager
 from desktop_pet.shared import events, event_queue, app_state, app_state_lock, PET_PORT
+from desktop_pet.shared import stats_tracker, balance_fetcher, git_info
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +49,8 @@ def handle_event():
 
     event_type = data.get("event", "unknown")
     message = data.get("message", "")
+    transcript_path = data.get("transcript_path")
+    cwd = data.get("cwd")
 
     event_record = {
         "event": event_type,
@@ -57,6 +60,12 @@ def handle_event():
     with app_state_lock:
         events.append(event_record)
         app_state["last_event_time"] = datetime.datetime.now()
+
+    # 用量统计 + git 状态（后台解析，非阻塞）
+    if transcript_path:
+        stats_tracker.on_activity(transcript_path, cwd)
+    if cwd:
+        git_info.set_cwd(cwd)
 
     try:
         event_queue.put_nowait((event_type, message))
@@ -87,6 +96,28 @@ def list_events():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.route("/stats", methods=["GET"])
+def get_stats():
+    snap = stats_tracker.snapshot()
+    return jsonify({
+        "cost": snap["cost"],
+        "peak_cost": snap["peak_cost"],
+        "off_peak_cost": snap["off_peak_cost"],
+        "legacy_cost": snap["legacy_cost"],
+        "efficiency": snap["efficiency"],
+        "satiety": snap["satiety"],
+        "food": snap["food"],
+        "stats": snap["stats"],
+        "balance": balance_fetcher.get(),
+        "git": git_info.get(),
+    })
+
+
+@app.route("/balance", methods=["GET"])
+def get_balance():
+    return jsonify({"balance": balance_fetcher.get()})
 
 
 @app.errorhandler(413)

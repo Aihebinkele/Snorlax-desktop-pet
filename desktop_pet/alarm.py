@@ -2,10 +2,13 @@
 
 import datetime
 import logging
+import os
 import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
+
+from desktop_pet.config import RESOURCE_DIR
 
 logger = logging.getLogger()
 
@@ -24,6 +27,114 @@ PRESET_ALARMS = [
 ]
 
 DAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+
+
+# ── 科技风配色（与 gui.py 数据条/面板一致）──
+_BG = "#0A0E17"          # 深空藏青（主背景）
+_FG = "#EAF2FF"          # 冷白主文字
+_MUTED = "#8AA0BE"       # 次要文字
+_GREEN = "#39FF14"       # 荧光绿（主按钮 / 电子钟）
+_BORDER = "#343A44"      # 分隔线（细深灰）
+
+
+def _hex_rgb(hex_color):
+    """#RRGGBB → (r, g, b)"""
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _find_text_font():
+    """优先返回微软雅黑粗体，其次雅黑、Segoe UI。"""
+    for p in (
+        r"C:\Windows\Fonts\msyhbd.ttc",
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\segoeui.ttf",
+    ):
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _pill_button_photo(master, label, accent_hex):
+    """渲染「8px 圆角 + 描边 + 深色半透明底」按钮图片（与统计窗口一致）。
+
+    返回 (normal_photo, hover_photo)；hover 在边框外叠一层同色微光晕。
+    渲染失败返回 None（调用方回退普通 Button）。
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
+        font_path = _find_text_font()
+        if not font_path:
+            return None
+        r, g, b = _hex_rgb(accent_hex)
+        fsize = 15
+        font = ImageFont.truetype(font_path, fsize)
+        probe = Image.new("RGBA", (1, 1))
+        d = ImageDraw.Draw(probe)
+        tb = d.textbbox((0, 0), label, font=font)
+        tw = tb[2] - tb[0]
+        th = tb[3] - tb[1]
+        pad_x, pad_y, radius = 18, 8, 8
+        w = pad_x * 2 + tw
+        h = pad_y * 2 + th
+        glow = 6
+        W, H = w + glow * 2, h + glow * 2
+
+        def _render(hover):
+            img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            ox, oy = glow, glow
+            if hover:
+                halo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+                ImageDraw.Draw(halo).rounded_rectangle(
+                    [ox, oy, ox + w, oy + h], radius=radius,
+                    outline=(r, g, b, 120), width=2,
+                )
+                halo = halo.filter(ImageFilter.GaussianBlur(3))
+                img = Image.alpha_composite(img, halo)
+            dr = ImageDraw.Draw(img)
+            dr.rounded_rectangle(
+                [ox, oy, ox + w, oy + h], radius=radius,
+                fill=(r, g, b, 40),
+            )
+            dr.rounded_rectangle(
+                [ox, oy, ox + w, oy + h], radius=radius,
+                outline=(r, g, b, 255), width=1,
+            )
+            ty = oy + (h - th) // 2 - tb[1]
+            dr.text((ox + pad_x, ty), label, font=font, fill=(r, g, b, 255))
+            return img
+
+        normal = ImageTk.PhotoImage(_render(False), master=master)
+        hover = ImageTk.PhotoImage(_render(True), master=master)
+        return normal, hover
+    except Exception:
+        logger.exception("渲染闹钟按钮图片失败：%r", label)
+        return None
+
+
+def _make_pill_button(parent, label, accent_hex, command):
+    """创建描边圆角按钮；PIL 渲染失败时回退普通 Button。"""
+    photos = _pill_button_photo(parent, label, accent_hex)
+    if photos is not None:
+        normal, hover = photos
+        btn = tk.Button(
+            parent, image=normal, command=command,
+            relief="flat", bd=0, highlightthickness=0,
+            bg=_BG, activebackground=_BG,
+            cursor="hand2", takefocus=False,
+        )
+        btn._pill_normal = normal
+        btn._pill_hover = hover
+        btn.bind("<Enter>", lambda e: btn.configure(image=hover))
+        btn.bind("<Leave>", lambda e: btn.configure(image=normal))
+        return btn
+    return tk.Button(
+        parent, text=label, command=command,
+        font=("Microsoft YaHei", 10, "bold"),
+        bg=accent_hex, fg=_BG,
+        activebackground=_BORDER, activeforeground=_BG,
+        relief="flat", padx=16, pady=6, cursor="hand2",
+    )
 
 
 def _default_alarms():
@@ -113,20 +224,27 @@ class AlarmManager:
 
     def _show_popup(self, message):
         """在主线程显示提醒弹窗"""
-        self._root.after(0, self._do_show_popup, message)
+        self._root.after(0, self._do_show_popup, self._root, message)
 
-    def _do_show_popup(self, message):
+    @staticmethod
+    def _do_show_popup(root, message):
         """实际显示弹窗（必须在主线程调用）"""
         try:
-            popup = tk.Toplevel(self._root)
-            popup.title("⏰ 闹钟提醒")
+            popup = tk.Toplevel(root)
+            _ico = os.path.join(RESOURCE_DIR, "pet_images", "idle.ico")
+            if os.path.exists(_ico):
+                try:
+                    popup.iconbitmap(_ico)
+                except Exception:
+                    pass
+            popup.title("闹钟提醒")
             popup.resizable(False, False)
             popup.attributes("-topmost", True)
-            popup.configure(bg="#2D2D2D")
+            popup.configure(bg=_BG)
 
             # 窗口大小
             popup_width = 380
-            popup_height = 180
+            popup_height = 240
 
             # 居中显示
             popup.update_idletasks()
@@ -136,80 +254,78 @@ class AlarmManager:
             y = (screen_h - popup_height) // 2
             popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
 
-            # 图标和标题
-            title_frame = tk.Frame(popup, bg="#2D2D2D")
-            title_frame.pack(fill="x", padx=20, pady=(20, 10))
+            # ── 电子钟（当前时间，科技感，每 0.5s 刷新、冒号闪烁）──
+            clock_frame = tk.Frame(popup, bg=_BG)
+            clock_frame.pack(fill="x", padx=20, pady=(18, 4))
 
+            clock_canvas = tk.Canvas(
+                clock_frame, width=340, height=66, bg=_BG, highlightthickness=0
+            )
+            clock_canvas.pack()
+
+            # 点亮段（荧光绿）
+            clock_text = clock_canvas.create_text(
+                170, 33, text="--:--:--",
+                font=("Consolas", 40, "bold"), fill=_GREEN,
+            )
+
+            date_label = tk.Label(
+                clock_frame, text="",
+                font=("Microsoft YaHei", 10), bg=_BG, fg=_MUTED,
+            )
+            date_label.pack(pady=(2, 0))
+
+            _blink = {"on": True}
+
+            def update_clock():
+                if not popup.winfo_exists():
+                    return
+                now = datetime.datetime.now()
+                t = now.strftime("%H:%M:%S")
+                if not _blink["on"]:
+                    t = t.replace(":", " ")
+                clock_canvas.itemconfigure(clock_text, text=t)
+                date_label.configure(
+                    text=f"{now.strftime('%Y-%m-%d')} {DAY_NAMES[now.weekday()]}"
+                )
+                _blink["on"] = not _blink["on"]
+                popup.after(500, update_clock)
+
+            update_clock()
+
+            # 分隔线
+            tk.Frame(popup, bg=_BORDER, height=1).pack(fill="x", padx=20, pady=(10, 0))
+
+            # 提醒内容
+            msg_frame = tk.Frame(popup, bg=_BG)
+            msg_frame.pack(fill="x", padx=20, pady=(10, 4))
             tk.Label(
-                title_frame,
-                text="⏰",
-                font=("Segoe UI Emoji", 32),
-                bg="#2D2D2D",
-                fg="#FFD54F",
-            ).pack(side="left", padx=(0, 12))
-
-            info_frame = tk.Frame(title_frame, bg="#2D2D2D")
-            info_frame.pack(side="left", fill="both", expand=True)
-
-            tk.Label(
-                info_frame,
-                text="闹钟提醒",
-                font=("Microsoft YaHei", 14, "bold"),
-                bg="#2D2D2D",
-                fg="#FFFFFF",
-            ).pack(anchor="w")
-
-            tk.Label(
-                info_frame,
+                msg_frame,
                 text=message,
                 font=("Microsoft YaHei", 12),
-                bg="#2D2D2D",
-                fg="#AAAAAA",
-                wraplength=260,
-                justify="left",
-            ).pack(anchor="w", pady=(4, 0))
+                bg=_BG,
+                fg=_FG,
+                wraplength=330,
+                justify="center",
+            ).pack(anchor="center")
 
-            # 按钮区域
-            btn_frame = tk.Frame(popup, bg="#2D2D2D")
-            btn_frame.pack(fill="x", padx=20, pady=(10, 20))
+            # 按钮区域（胶囊描边按钮）
+            btn_frame = tk.Frame(popup, bg=_BG)
+            btn_frame.pack(fill="x", padx=20, pady=(8, 18))
 
             def close_popup():
                 popup.destroy()
 
-            tk.Button(
-                btn_frame,
-                text="知道了 ✓",
-                command=close_popup,
-                font=("Microsoft YaHei", 11),
-                bg="#4CAF50",
-                fg="#FFFFFF",
-                activebackground="#388E3C",
-                activeforeground="#FFFFFF",
-                relief="flat",
-                padx=24,
-                pady=6,
-                cursor="hand2",
-            ).pack(side="right")
-
-            # 5分钟后再次提醒按钮
             def snooze():
                 popup.destroy()
-                self._root.after(5 * 60 * 1000, self._do_show_popup, f"🔔 {message}\n（5分钟后再次提醒）")
+                root.after(5 * 60 * 1000, AlarmManager._do_show_popup, root, f"{message}\n（5分钟后再次提醒）")
 
-            tk.Button(
-                btn_frame,
-                text="5分钟后提醒",
-                command=snooze,
-                font=("Microsoft YaHei", 10),
-                bg="#555555",
-                fg="#CCCCCC",
-                activebackground="#444444",
-                activeforeground="#CCCCCC",
-                relief="flat",
-                padx=16,
-                pady=6,
-                cursor="hand2",
-            ).pack(side="right", padx=(0, 8))
+            _make_pill_button(btn_frame, "5分钟后提醒", _MUTED, snooze).pack(
+                side="right", padx=(0, 8)
+            )
+            _make_pill_button(btn_frame, "知道了", _GREEN, close_popup).pack(
+                side="right"
+            )
 
             # 播放系统提示音
             try:
@@ -226,3 +342,8 @@ class AlarmManager:
 
         except Exception as exc:
             logger.error(f"[ALARM] Failed to show popup: {exc}")
+
+
+def show_alarm_popup(root, message):
+    """在主线程弹出一条闹钟提醒弹窗（供闹钟触发与 GUI 预览复用）。"""
+    AlarmManager._do_show_popup(root, message)

@@ -160,13 +160,18 @@ class ChatDialog:
         canvas.bind("<ButtonPress-1>", on_press)
         canvas.bind("<B1-Motion>", on_drag)
 
-        # ── 定位：宠物上方 ──
+        # ── 定位：数据条下方（宠物窗口底部） ──
         win.update_idletasks()
         pet_x = self._root.winfo_x()
         pet_y = self._root.winfo_y()
         pet_w = self._root.winfo_width()
+        pet_h = self._root.winfo_height()
         x = pet_x + (pet_w - self._bar_w) // 2
-        y = max(20, pet_y - self._bar_h - 8)
+        y = pet_y + pet_h + 8
+        # 防止超出屏幕底部
+        screen_h = win.winfo_screenheight()
+        if y + self._bar_h > screen_h - 8:
+            y = max(8, screen_h - self._bar_h - 8)
         win.geometry(f"+{x}+{y}")
 
         self._entry.focus_set()
